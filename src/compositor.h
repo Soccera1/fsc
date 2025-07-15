@@ -26,12 +26,11 @@ struct output {
     int scale; // e.g. 125 for 125%
 };
 
-#include <X11/extensions/Xrender.h>
+#include <X11/extensions/Xcomposite.h>
 
 struct client {
     Window window;
-    Pixmap pixmap;
-    Picture picture;
+    Picture picture; // Picture for the redirected window content
     int scale;
 };
 

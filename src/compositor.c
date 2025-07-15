@@ -59,76 +59,31 @@ int compositor_init(struct compositor *compositor) {
     compositor->root = DefaultRootWindow(compositor->display);
     compositor->clients = NULL;
     compositor->client_count = 0;
-    XSelectInput(compositor->display, compositor->root, SubstructureRedirectMask | SubstructureNotifyMask);
+
+    int composite_event_base, composite_error_base;
+    if (!XCompositeQueryExtension(compositor->display, &composite_event_base, &composite_error_base)) {
+        fprintf(stderr, "XComposite extension not found\n");
+        return 0;
+    }
+
+    XCompositeRedirectSubwindows(compositor->display, compositor->root, CompositeRedirectAutomatic);
 
     compositor_get_outputs(compositor);
     return 1;
 }
 
-static void compositor_handle_map_request(struct compositor *compositor, XMapRequestEvent *event) {
-    XWindowAttributes attr;
-    XGetWindowAttributes(compositor->display, event->window, &attr);
 
-    int scale = 100; // Default scale
-    // Find the output the window is on and get its scale
-    for (int i = 0; i < compositor->output_count; i++) {
-        // A more robust method would be needed for multi-monitor setups
-        scale = compositor->outputs[i].scale;
-        break;
-    }
-
-    int scaled_width = attr.width * scale / 100;
-    int scaled_height = attr.height * scale / 100;
-
-    Pixmap pixmap = XCreatePixmap(compositor->display, event->window, scaled_width, scaled_height, attr.depth);
-
-    XRenderPictFormat *format = XRenderFindVisualFormat(compositor->display, attr.visual);
-    XRenderPictureAttributes pa;
-    pa.subwindow_mode = IncludeInferiors;
-    Picture picture = XRenderCreatePicture(compositor->display, event->window, format, CPSubwindowMode, &pa);
-
-    compositor->clients = realloc(compositor->clients, sizeof(struct client) * (compositor->client_count + 1));
-    compositor->clients[compositor->client_count].window = event->window;
-    compositor->clients[compositor->client_count].pixmap = pixmap;
-    compositor->clients[compositor->client_count].picture = picture;
-    compositor->clients[compositor->client_count].scale = scale;
-    compositor->client_count++;
-
-    XMapWindow(compositor->display, event->window);
-}
-
-static void compositor_handle_configure_request(struct compositor *compositor, XConfigureRequestEvent *event) {
-    // Find the client
-    for (int i = 0; i < compositor->client_count; i++) {
-        if (compositor->clients[i].window == event->window) {
-            int scale = compositor->clients[i].scale;
-            int scaled_width = event->width * scale / 100;
-            int scaled_height = event->height * scale / 100;
-
-            XFreePixmap(compositor->display, compositor->clients[i].pixmap);
-            XWindowAttributes attr;
-            XGetWindowAttributes(compositor->display, event->window, &attr);
-            compositor->clients[i].pixmap = XCreatePixmap(compositor->display, event->window, scaled_width, scaled_height, attr.depth);
-            break;
-        }
-    }
-
-    XWindowChanges wc;
-    wc.x = event->x;
-    wc.y = event->y;
-    wc.width = event->width;
-    wc.height = event->height;
-    wc.border_width = event->border_width;
-    wc.sibling = event->above;
-    wc.stack_mode = event->detail;
-    XConfigureWindow(compositor->display, event->window, event->value_mask, &wc);
-}
 
 static void compositor_redraw(struct compositor *compositor, Window window) {
     for (int i = 0; i < compositor->client_count; i++) {
         if (compositor->clients[i].window == window) {
             XWindowAttributes attr;
             XGetWindowAttributes(compositor->display, window, &attr);
+
+            // Get the redirected window content as a Picture
+            // This is the key change: we're using the window itself as the source for the picture
+            // because XCompositeRedirectSubwindows makes its content available.
+            Picture source_picture = XRenderCreatePicture(compositor->display, window, XRenderFindVisualFormat(compositor->display, attr.visual), 0, NULL);
 
             // Create a temporary pixmap and picture for scaling
             Pixmap temp_pixmap = XCreatePixmap(compositor->display, window, attr.width, attr.height, attr.depth);
@@ -146,10 +101,10 @@ static void compositor_redraw(struct compositor *compositor, Window window) {
             transform.matrix[2][0] = XDoubleToFixed(0.0);
             transform.matrix[2][1] = XDoubleToFixed(0.0);
             transform.matrix[2][2] = XDoubleToFixed((double)compositor->clients[i].scale / 100.0);
-            XRenderSetPictureTransform(compositor->display, compositor->clients[i].picture, &transform);
+            XRenderSetPictureTransform(compositor->display, source_picture, &transform);
 
             // Scale the picture
-            XRenderComposite(compositor->display, PictOpSrc, compositor->clients[i].picture, None, temp_picture, 0, 0, 0, 0, 0, 0, attr.width, attr.height);
+            XRenderComposite(compositor->display, PictOpSrc, source_picture, None, temp_picture, 0, 0, 0, 0, 0, 0, attr.width, attr.height);
 
             // Copy the scaled picture to the window
             XCopyArea(compositor->display, temp_pixmap, window, XDefaultGC(compositor->display, 0), 0, 0, attr.width, attr.height, 0, 0);
@@ -157,6 +112,7 @@ static void compositor_redraw(struct compositor *compositor, Window window) {
             // Free the temporary pixmap and picture
             XFreePixmap(compositor->display, temp_pixmap);
             XRenderFreePicture(compositor->display, temp_picture);
+            XRenderFreePicture(compositor->display, source_picture); // Free the source picture created from the window
             break;
         }
     }
@@ -167,15 +123,11 @@ void compositor_run(struct compositor *compositor) {
     while (1) {
         XNextEvent(compositor->display, &event);
         switch (event.type) {
-            case MapRequest:
-                compositor_handle_map_request(compositor, &event.xmaprequest);
-                break;
-            case ConfigureRequest:
-                compositor_handle_configure_request(compositor, &event.xconfigurerequest);
-                break;
             case Expose:
                 compositor_redraw(compositor, event.xexpose.window);
                 break;
+            // Add handlers for CompositeRedirect events if needed, but Expose should trigger redraw.
+            // For now, we'll rely on Expose events to trigger redrawing.
         }
     }
 }
