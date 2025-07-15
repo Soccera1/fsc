@@ -86,6 +86,7 @@ DISPLAY=:1 xclock
 
 The application window should appear inside the Xephyr window, scaled according to the factor you set in `src/compositor.c`.
 
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See the `LICENSE` file for more details.
