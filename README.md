@@ -15,14 +15,30 @@ To build the compositor, you need the following development libraries:
 - `libx11-dev`
 - `libxrandr-dev`
 - `libxrender-dev`
+- `libxcomposite-dev`
 
 On Debian/Ubuntu, you can install them using:
 
 ```bash
-sudo apt-get install libx11-dev libxrandr-dev libxrender-dev
+sudo apt-get install libx11-dev libxrandr-dev libxrender-dev libxcomposite-dev
 ```
 
-Once the dependencies are installed, navigate to the project root directory and run `make`:
+### Configuration
+
+The compositor's behavior can be configured via `config.h`. A default configuration file, `config.def.h`, is provided. To create your `config.h`, simply copy `config.def.h`:
+
+```bash
+cp config.def.h config.h
+```
+
+You can then edit `config.h` to adjust parameters such as:
+
+- `DEFAULT_SCALE`: The default scaling factor (e.g., `125` for 125%).
+- `SCREEN_WIDTH`, `SCREEN_HEIGHT`: The default resolution for the Xephyr window.
+
+After making changes to `config.h`, you need to recompile the compositor.
+
+Once the dependencies are installed and `config.h` is set up, navigate to the project root directory and run `make`:
 
 ```bash
 make
@@ -47,45 +63,34 @@ make run
 ```
 
 This command will:
-1. Start a Xephyr instance on display `:1` with a resolution of 1024x768.
+1. Start a Xephyr instance on display `:1` with the resolution defined in `config.h`.
 2. Introduce a 1-second delay to allow Xephyr to initialize.
 3. Launch `fsc` on the `:1` display.
 
 You will see a black Xephyr window appear. This window is now being managed by your `fsc` compositor.
 
-### Testing Fractional Scaling
+### Testing with dwm
 
-By default, the compositor is set to 100% scaling. To test fractional scaling:
-
-1.  Open `src/compositor.c`.
-2.  Locate the line:
-    ```c
-    compositor->outputs[i].scale = 100; // Default to 100%
-    ```
-3.  Change `100` to your desired scaling factor (e.g., `125` for 125%, `150` for 150%).
-4.  Save the file.
-5.  Stop the running compositor (if any) by pressing `Ctrl+C` in the terminal where `make run` is active.
-6.  Recompile the project:
-    ```bash
-    make
-    ```
-7.  Restart the compositor:
-    ```bash
-    make run
-    ```
-
-Now, open a **new terminal window** (do not close the one running `make run`) and launch an X application, directing it to the Xephyr display:
+Since `fsc` is now a pure compositor, it can run alongside a window manager like `dwm`. To test this, you can use the `dwm` target:
 
 ```bash
-DISPLAY=:1 xterm
-# Or for st:
-DISPLAY=:1 st
-# Or for xclock:
-DISPLAY=:1 xclock
+make dwm
 ```
 
-The application window should appear inside the Xephyr window, scaled according to the factor you set in `src/compositor.c`.
+This command will:
+1. Start a Xephyr instance.
+2. Launch `fsc`.
+3. Launch `dwm` within the same Xephyr display.
 
+You should see the `dwm` interface appear in the Xephyr window. You can then launch applications (e.g., `DISPLAY=:1 xterm`) and `dwm` will manage them as usual within that nested environment, with `fsc` applying the scaling.
+
+### Testing Fractional Scaling
+
+To test fractional scaling, modify the `DEFAULT_SCALE` in your `config.h` file. After saving `config.h`, recompile and restart `fsc` (or `make dwm`). Then, launch an X application as described above. The application window should appear inside the Xephyr window, scaled according to the factor you set.
+
+## Credits
+
+This project was developed collaboratively by a human user and a Gemini-powered AI assistant.
 
 ## License
 

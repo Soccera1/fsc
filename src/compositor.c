@@ -16,6 +16,7 @@
 #include "compositor.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "config.h"
 
 static void compositor_get_outputs(struct compositor *compositor) {
     XRRScreenResources *res = XRRGetScreenResources(compositor->display, compositor->root);
@@ -42,7 +43,7 @@ static void compositor_get_outputs(struct compositor *compositor) {
                 XRRFreeCrtcInfo(crtc_info);
             }
         }
-        compositor->outputs[i].scale = 100; // Default to 100%
+        compositor->outputs[i].scale = DEFAULT_SCALE; // Default to 100%
 
         XRRFreeOutputInfo(output_info);
     }

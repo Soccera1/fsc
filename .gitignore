@@ -1,0 +1,8 @@
+# Binaries
+fsc
+
+# Object files
+*.o
+
+# Configuration
+config.h
