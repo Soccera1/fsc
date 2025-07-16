@@ -13,38 +13,61 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPOSITOR_H
-#define COMPOSITOR_H
+#ifndef FSC_COMPOSITOR_H
+#define FSC_COMPOSITOR_H
 
 #include <X11/Xlib.h>
+#include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xrandr.h>
+#include <X11/extensions/Xrender.h>
+#include <stdio.h>
+
+extern int verbose;
+
+#define DPRINTF(...)                                                           \
+  if (verbose) {                                                               \
+    fprintf(stderr, __VA_ARGS__);                                              \
+  }
 
 struct output {
-    char *name;
-    int width;
-    int height;
-    int scale; // e.g. 125 for 125%
+  char *name;
+  int width;
+  int height;
+  int scale;
 };
 
-#include <X11/extensions/Xcomposite.h>
+typedef union {
+  int i;
+  unsigned int ui;
+  float f;
+  const void *v;
+} Arg;
 
 struct client {
-    Window window;
-    Picture picture; // Picture for the redirected window content
-    int scale;
+  Window window;
+  int scale;
 };
 
+typedef struct {
+  unsigned int mod;
+  KeySym keysym;
+  void (*func)(const Arg *);
+  const Arg arg;
+} Key;
+
 struct compositor {
-    Display *display;
-    Window root;
-    int output_count;
-    struct output *outputs;
-    struct client *clients;
-    int client_count;
+  Display *display;
+  Window root;
+  struct client *clients;
+  int client_count;
+  struct output *outputs;
+  int output_count;
+  int running;
 };
 
 int compositor_init(struct compositor *compositor);
 void compositor_run(struct compositor *compositor);
 void compositor_fini(struct compositor *compositor);
 
-#endif // COMPOSITOR_H
+#endif // FSC_COMPOSITOR_H
+

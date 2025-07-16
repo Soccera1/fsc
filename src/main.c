@@ -14,13 +14,43 @@
  */
 
 #include "compositor.h"
+#include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+int verbose = 0;
 
 int main(int argc, char *argv[]) {
-    struct compositor compositor;
-    if (!compositor_init(&compositor)) {
-        return 1;
+  int launch_dwm = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--dwm") == 0) {
+      launch_dwm = 1;
+    } else if (strcmp(argv[i], "-v") == 0 ||
+               strcmp(argv[i], "--verbose") == 0) {
+      verbose = 1;
     }
-    compositor_run(&compositor);
-    compositor_fini(&compositor);
-    return 0;
+  }
+
+  if (verbose) {
+    fprintf(stderr, "Verbose mode enabled.\n");
+  }
+
+  struct compositor compositor;
+  if (!compositor_init(&compositor)) {
+    return 1;
+  }
+
+  if (launch_dwm) {
+    if (fork() == 0) {
+      char *const dwm_argv[] = {DWM_PATH, NULL};
+      execvp(dwm_argv[0], dwm_argv);
+      perror("execvp " DWM_PATH);
+      return 1;
+    }
+  }
+
+  compositor_run(&compositor);
+  compositor_fini(&compositor);
+  return 0;
 }
