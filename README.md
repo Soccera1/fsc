@@ -1,5 +1,14 @@
 # X Fractional Scaling Compositor (fsc)
 
+## Current Status
+
+**Disclaimer:** This project is currently a work in progress and does not yet implement fractional scaling as intended. At the moment, it primarily serves as a foundation for testing and development, with the following capabilities:
+
+- Spawning a new window on a separate TTY.
+- Launching the `dwm` window manager within the compositor's environment.
+
+The core fractional scaling functionality is under active development. I am currently dogfooding the project by using the `dwm` integration for my daily workflow.
+
 `fsc` is a skeleton X compositor designed to handle fractional scaling using a method of scaling up and then scaling down. This project serves as a basic example and starting point for implementing more advanced fractional scaling techniques in an X environment.
 
 ## Features
