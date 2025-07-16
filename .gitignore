@@ -6,3 +6,6 @@ fsc
 
 # Configuration
 config.h
+
+# Error logs
+error.log
