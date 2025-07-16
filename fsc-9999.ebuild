@@ -8,6 +8,7 @@ HOMEPAGE="https://github.com/soccera1/fsc"
 LICENSE="GPL-3"
 SLOT="0"
 KEYWORDS="amd64"
+IUSE="xephyr"
 
 # Build dependencies
 DEPEND="
@@ -40,6 +41,14 @@ src_prepare() {
 	if [[ ! -f config.h ]]; then
 		cp config.def.h config.h
 	fi
+}
+
+src_compile() {
+	local emake_args=()
+	if use xephyr; then
+		emake_args+=( XEPHYR_SUPPORT=1 )
+	fi
+	emake "${emake_args[@]}"
 }
 
 src_install() {

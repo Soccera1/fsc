@@ -15,6 +15,7 @@
 
 #include "compositor.h"
 #include "config.h"
+#include <X11/XKBlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -172,7 +173,7 @@ void keypress(struct compositor *compositor, XEvent *e) {
   XKeyEvent *ev;
 
   ev = &e->xkey;
-  keysym = XKeycodeToKeysym(compositor->display, (KeyCode)ev->keycode, 0);
+  keysym = XkbKeycodeToKeysym(compositor->display, ev->keycode, 0, 0);
   DPRINTF("Keypress event: keysym=0x%lx, state=0x%x\n", keysym, ev->state);
 
   for (i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {

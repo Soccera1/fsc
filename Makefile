@@ -11,6 +11,11 @@ else
 CFLAGS += -DDWM_PATH="\"$(DWM_PATH)\""
 endif
 
+# Enable Xephyr support by passing XEPHYR_SUPPORT=1
+ifeq ($(XEPHYR_SUPPORT),1)
+CFLAGS += -DXEPHYR_SUPPORT
+endif
+
 SRC = src/main.c src/compositor.c
 OBJ = $(SRC:.c=.o)
 EXEC = fsc
